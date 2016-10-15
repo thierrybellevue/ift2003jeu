@@ -13,11 +13,13 @@ nouveau_paquet(Paquet) :-
 carte(Suite, Rang, Valeur) :-
         suites(Suite), rang(Rang), valeur(Valeur).
 
+% Vérification si la carte A est plus grande que la carte B
 carte_plus_grande(carte(X,_), carte(Y,_)) :-
                valeur(X, A),
                valeur(Y, B),
                A > B.
 
+% Vérification si la carte A est plus petite que la carte B
 carte_plus_petite(carte(X,_), carte(Y,_)) :-
                valeur(X, A),
                valeur(Y, B),
