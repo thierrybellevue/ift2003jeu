@@ -74,13 +74,13 @@ afficher_ma_main :-
 
 % Permet d'afficher la main de l'adversaire
 afficher_sa_main :-
-    write("Sa main : "), deck:paquetjoueur2(P), afficher_paquet(P).
+    write("La main de votre adversaire : "), deck:paquetjoueur2(P), afficher_paquet(P).
 
 % Permer de déposer une carte
 deposer_carte(X, Y) :- deck:paquetjoueur1(P),
                         deck:une_carte(X, Y, Carte),
                         member(Carte, P),
-                        (cartesurtable(C), carte_plus_grande(C, Carte);  cartesurtable(C), carte_plus_petite(C, Carte);  cartesurtable(C), carte_meme_suite(C, Carte)),
+                        (cartesurtable(C), carte_plus_grande(C, Carte);  cartesurtable(C), carte_plus_petite(C, Carte)),
                         delete(P, Carte, NouveauPaquet),
                         retract(cartesurtable(_)),
                         assert(cartesurtable(Carte)),
@@ -102,6 +102,7 @@ adversaire_depose_carte(Carte) :- deck:paquetjoueur2(P),
                         length(NouveauPaquet, Compte),
                         (Compte =:= 0, write("L'adversaire a gagné.");
                         write("L'adversaire dépose une carte."), nl, write("Il a maintenant "), write(Compte), write(" carte(s) en main."), nl,
+                        afficher_sa_main,
                         write("La nouvelle carte sur table est:"), nl, afficher_carte(Carte), nl,
                         afficher_ma_main).
                         
@@ -140,6 +141,7 @@ adversaire_pige_carte :- deck:piger_une_carte(Carte), !,
                          assert(deck:paquetjoueur2(NouveauPaquet)),
                          length(NouveauPaquet, Compte),
                          write("L'adversaire a pigé une carte."), nl, write("Il a maintenant "), write(Compte), write(" carte(s) en main."), nl,
+                         afficher_sa_main,
                          cartesurtable(CarteSurTable),
                          write("Sur la table : "), afficher_carte(CarteSurTable), nl,
                          afficher_ma_main).
