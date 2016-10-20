@@ -11,8 +11,10 @@
                   distribuer_cartes/5, % +ParPaquet, -Joueur1, -Joueur2, -NbCartesRestantes, -PaquetRestant
                   carte_plus_grande/2, % +Carte, +Carte
                   carte_plus_petite/2, % +Carte, +Carte
+                  carte_meme_suite/2, % +Carte, +Carte
                   afficher_carte/1, % Carte
-                  afficher_paquet/1 % Paquet
+                  afficher_paquet/1, % Paquet
+                  piger_une_carte/1 % Carte
                  ]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -20,7 +22,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Attribution des valeurs pour chacune des cartes
-valeur(a, 1).
+valeur(as, 1).
 valeur(2, 2).
 valeur(3, 3).
 valeur(4, 4).
@@ -30,18 +32,19 @@ valeur(7, 7).
 valeur(8, 8).
 valeur(9, 9).
 valeur(10, 10).
-valeur(v, 11).
-valeur(d, 12).
-valeur(r, 13).
-valeur(j, 99).
+valeur(valet, 11).
+valeur(dame, 12).
+valeur(roi, 13).
+valeur(joker, 99).
 
 % Création du paquet (Deck) principal
 nouveau_paquet(Paquet) :-
         Suites = [carreau, coeur, trefle, pique],
-        Cartes = [2, 3, 4, 5, 6, 7, 8, 9, 10, v, d, r, a],
+        Cartes = [2, 3, 4, 5, 6, 7, 8, 9, 10, valet, dame, roi, as],
         setof(carte(Carte, Suite), (member(Suite, Suites), member(Carte, Cartes)), A),
-        append([carte(j, j), carte(j, j)], A, Paquet).
+        append([carte(joker, joker), carte(joker, joker)], A, Paquet).
 
+une_carte(X, Y, M) :- M = carte(X, Y).
 
 % Piger une carte dans un paquet quelconque
 piger_une_carte(X, Paquet) :-  random_member(X, Paquet).
@@ -54,7 +57,9 @@ creer_paquet(Compte, PaquetDebut, PaquetFinal) :-
 
 % Distribuer les cartes ParPaquet = 8
 distribuer_cartes(ParPaquet, Joueur1, Joueur2, NbCartesRestantes, PaquetRestant) :-
-      nouveau_paquet(PaquetDebut),
+      nouveau_paquet(P1),
+      nouveau_paquet(P2),
+      append(P1, P2, PaquetDebut),
       creer_paquet(ParPaquet, PaquetDebut, Joueur1),
       subtract(PaquetDebut, Joueur1, Resultat),
       creer_paquet(ParPaquet, Resultat, Joueur2),
@@ -80,24 +85,39 @@ afficher_paquet([X|List]) :- afficher_carte(X), !, write(", "), afficher_paquet(
 carte_plus_grande(carte(X,_), carte(Y,_)) :-
                valeur(X, A),
                valeur(Y, B),
-               A > B.
+               (A =:= (B + 1); A =:= 13, B =:= 1; A =:= 99; B =:= 99; A =:= B).
 
 % Vérification d'une carte plus petite qu'une autre
 carte_plus_petite(carte(X,_), carte(Y,_)) :-
                valeur(X, A),
                valeur(Y, B),
-               A < B.
+               (A =:= (B - 1); A =:= 1, B =:= 13; A =:= 99; B =:= 99; A =:= B).
+               
+% Vérification d'une carte même suite
+carte_meme_suite(carte(_,X), carte(_,Y)) :- X = Y.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Predicats non utilisés pour le moment
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Sélectionner une carte au hasard (Dans un nouveau paquet) - Pas utilisé dans la méthode principale
-piger_une_carte(X) :- nouveau_paquet(CI), random_member(X, CI).
+piger_une_carte(X) :- paquetrestant(P),
+                      length(P, Compte),
+                      (Compte =:= 0,
+                      write("Il n'y a plus de carte à piger."), nl,
+                      paquetjoueur1(P1),
+                      paquetjoueur2(P2),
+                      length(P1, Compte1),
+                      length(P2, Compte2),
+                      (Compte1 > Compte2, write("Vous avez gagné."); Compte1 < Compte2, write("L'adversaire a gagné"); Compte1 =:= Compte2, write("Ex-aequo")), nl;
+                      random_member(X, P),
+                      delete(P, X, NouveauPaquet),
+                      retract(paquetrestant(_)),
+                      assert(paquetrestant(NouveauPaquet))).
 
 % Carte !!! Pas encore utilisé !!!
-carte(Suite, Rang, Valeur) :-
-        suites(Suite), rang(Rang), valeur(Valeur).
+%carte(Suite, Rang, Valeur) :-
+%        suites(Suite), rang(Rang), valeur(Valeur).
 
 % Distribuer toutes les cartes entre deux joueurs !!! Pas utilisé !!!
 distribuer_toutes_cartes([],[],[]).

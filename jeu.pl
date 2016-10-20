@@ -4,9 +4,27 @@
 
 % jeu.pl
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Exemples d'utilisation
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Pour démarrer le jeu
+% ?- demarrer_jeu.
+%
+%% Pour déposer une carte
+% ?- deposer_carte(7, pique).
+%
+%% Pour piger une carte
+% ?- piger_une_carte.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 :- use_module(deck).
 
 par_paquet(8).
+
+% Ajout dans une liste
+add(X, [], [X]).
+add(X, Y, Z) :- Z = [X|Y].
 
 % Retourne la sauvegarde du jeu
 retourner_sauvegarde(ParPaquet, PaquetJoueur1, PaquetJoueur2, NbCartesRestantes, PaquetRestant, CarteSurTable) :-
@@ -26,6 +44,7 @@ redemarrer_jeu(_) :-
     retractall(deck:paquetjoueur1(_)),
     retractall(deck:paquetjoueur2(_)),
     retractall(deck:paquetrestant(_)),
+    retractall(a_depose_une_carte(_)),
     retractall(cartesurtable(_)),
     retractall(sauvegarde_jeu(_)).
     
@@ -39,45 +58,95 @@ demarrer_jeu :-
     write("************************* DÉMARRAGE DU JEU *********************************"),
     nl,
     write("L'adversaire a 8 cartes en main"), nl,
-    write("Sur la table : "), afficher_carte(CarteSurTable), nl,
-    write("Votre main : "), afficher_paquet(PaquetJoueur1),
+    afficher_carte_sur_table,
+    afficher_ma_main,
     nl,
     write("**********************************************************"),
     nl,
-    write("Voulez-vous déposer une carte? Exemple: deposer_carte(2, trefle) ou piger_une_carte?").
-    
-    
-deposer_carte(Carte) :- deck:paquetjoueur1(P),
-                        member(Carte, P),
-                        (cartesurtable(C), carte_plus_grande(C, Carte);  cartesurtable(C), carte_plus_petite(C, Carte)),
-                        write("La nouvelle carte sur table est:"), nl, afficher_carte(Carte).
-    
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Exemples d'utilisation
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    write("Voulez-vous déposer une carte? Exemple: deposer_carte(2, trefle) ou piger_une_carte?"), nl.
 
-% ?- redemarrer_jeu(_).
-% True.
-%%
-% ?- demarrer_jeu(8, PaquetJoueur1, PaquetJoueur2, NbCartesRestantes, PaquetRestant, CarteSurTable).
-% PaquetJoueur1 = [carte(3, coeur), carte(3, trefle), carte(d, carreau), carte(4, coeur), carte(a, carreau), carte(9, carreau), carte(8, carreau), carte(7, carreau)],
-% PaquetJoueur2 = [carte(5, pique), carte(v, trefle), carte(10, trefle), carte(7, pique), carte(10, carreau), carte(7, trefle), carte(5, trefle), carte(2, carreau)],
-% NbCartesRestantes = 38,
-% PaquetRestant = [carte(j, j), carte(j, j), carte(2, coeur), carte(2, pique), carte(2, trefle), carte(3, carreau), carte(3, pique), carte(4, carreau), carte(..., ...)|...],
-% CarteSurTable = carte(2, pique) ;
-%%
-% ?- cartesurtable(N).
-% N = carte(2, pique) ;
-%%
-% ?- paquetjoueur1(P).
-% P = [carte(3, coeur), carte(3, trefle), carte(d, carreau), carte(4, coeur), carte(a, carreau), carte(9, carreau), carte(8, carreau), carte(7, carreau)] ;
-%%
-% ?- paquetjoueur2(P).
-% P = [carte(5, pique), carte(v, trefle), carte(10, trefle), carte(7, pique), carte(10, carreau), carte(7, trefle), carte(5, trefle), carte(2, carreau)] ;
-%%
-% ?- carte_plus_grande(carte(j,j), carte(2, carreau)).
-% True.
-%%
-% ?- carte_plus_grande(carte(2, carreau), carte(j, j)).
-% False.
-%%
+% Permet d'afficher la carte sur table
+afficher_carte_sur_table :- cartesurtable(C), write("Sur la table : "), afficher_carte(C), nl.
+
+% Permet d'afficher la main du joueur
+afficher_ma_main :-
+    write("Votre main : "), deck:paquetjoueur1(P), afficher_paquet(P).
+
+% Permet d'afficher la main de l'adversaire
+afficher_sa_main :-
+    write("Sa main : "), deck:paquetjoueur2(P), afficher_paquet(P).
+
+% Permer de déposer une carte
+deposer_carte(X, Y) :- deck:paquetjoueur1(P),
+                        deck:une_carte(X, Y, Carte),
+                        member(Carte, P),
+                        (cartesurtable(C), carte_plus_grande(C, Carte);  cartesurtable(C), carte_plus_petite(C, Carte);  cartesurtable(C), carte_meme_suite(C, Carte)),
+                        delete(P, Carte, NouveauPaquet),
+                        retract(cartesurtable(_)),
+                        assert(cartesurtable(Carte)),
+                        retract(deck:paquetjoueur1(_)),
+                        assert(deck:paquetjoueur1(NouveauPaquet)),
+                        length(NouveauPaquet, Compte),
+                        (Compte =:= 0, write("Vous avez gagné.");
+                        write("Vous avez maintenant "), write(Compte), write(" carte(s) en main."), nl,
+                        write("La nouvelle carte sur table est:"), nl, afficher_carte(Carte), nl,
+                        adversaire_joue, nl).
+
+% L'adversaire dépose une carte sur la table
+adversaire_depose_carte(Carte) :- deck:paquetjoueur2(P),
+                        delete(P, Carte, NouveauPaquet),
+                        retract(cartesurtable(_)),
+                        assert(cartesurtable(Carte)),
+                        retract(deck:paquetjoueur2(_)),
+                        assert(deck:paquetjoueur2(NouveauPaquet)),
+                        length(NouveauPaquet, Compte),
+                        (Compte =:= 0, write("L'adversaire a gagné.");
+                        write("L'adversaire dépose une carte."), nl, write("Il a maintenant "), write(Compte), write(" carte(s) en main."), nl,
+                        write("La nouvelle carte sur table est:"), nl, afficher_carte(Carte), nl,
+                        afficher_ma_main).
+                        
+% L'adversaire joue son tour
+adversaire_joue :- deck:paquetjoueur2(P),
+                   trouver_une_carte_a_jouer(P).
+
+% Piger une carte
+piger_une_carte :- deck:piger_une_carte(Carte), !,
+                   deck:paquetrestant(P),
+                   length(P, ComptePaquetRestant),
+                   (ComptePaquetRestant =:= 0,
+                   write("Partie terminée!"),nl;
+                   write("Il reste "), write(ComptePaquetRestant), write(" carte(s) à piger."), nl,
+                   deck:paquetjoueur1(Paquet),
+                   add(Carte, Paquet, NouveauPaquet),
+                   retract(deck:paquetjoueur1(_)),
+                   assert(deck:paquetjoueur1(NouveauPaquet)),
+                   length(NouveauPaquet, Compte),
+                   write("Vous avez pigé une carte."), nl, write("Vous avez maintenant "), write(Compte), write(" carte(s) en main."), nl,
+                   afficher_ma_main, nl,
+                   cartesurtable(CarteSurTable),
+                   write("Sur la table : "), afficher_carte(CarteSurTable), nl,
+                   adversaire_joue, nl).
+
+% Adversaire pige une carte
+adversaire_pige_carte :- deck:piger_une_carte(Carte), !,
+                         deck:paquetrestant(P),
+                         length(P, ComptePaquetRestant),
+                         (ComptePaquetRestant =:= 0,
+                         write("Partie terminée!"),nl;
+                         write("Il reste "), write(ComptePaquetRestant), write(" carte(s) à piger."), nl,
+                         deck:paquetjoueur2(Paquet),
+                         add(Carte, Paquet, NouveauPaquet),
+                         retract(deck:paquetjoueur2(_)),
+                         assert(deck:paquetjoueur2(NouveauPaquet)),
+                         length(NouveauPaquet, Compte),
+                         write("L'adversaire a pigé une carte."), nl, write("Il a maintenant "), write(Compte), write(" carte(s) en main."), nl,
+                         cartesurtable(CarteSurTable),
+                         write("Sur la table : "), afficher_carte(CarteSurTable), nl,
+                         afficher_ma_main).
+
+% Permet à l'adversaire de trouver une carte à jouer
+trouver_une_carte_a_jouer([Carte|Paquet]) :-
+                                      (((cartesurtable(C), carte_plus_grande(C, Carte);  cartesurtable(C), carte_plus_petite(C, Carte)),
+                                      adversaire_depose_carte(Carte);
+                                      trouver_une_carte_a_jouer(Paquet));
+                                      adversaire_pige_carte).
