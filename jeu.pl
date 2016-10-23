@@ -40,17 +40,16 @@ premiere_carte_sur_table(Carte) :-
               assert(deck:paquetrestant(NouveauPaquetRestant)).
               
 % Efface toutes les données sauvegardées - Refactor, dispose
-redemarrer_jeu(_) :-
+redemarrer_jeu :-
     retractall(deck:paquetjoueur1(_)),
     retractall(deck:paquetjoueur2(_)),
     retractall(deck:paquetrestant(_)),
-    retractall(a_depose_une_carte(_)),
     retractall(cartesurtable(_)),
     retractall(sauvegarde_jeu(_)).
     
 % Démarrer le jeu - Création des paquets, et mise en place de la carte sur table
 demarrer_jeu :-
-    redemarrer_jeu(_),
+    redemarrer_jeu,
     par_paquet(ParPaquet),
     distribuer_cartes(ParPaquet, PaquetJoueur1, PaquetJoueur2, NbCartesRestantes, PaquetRestant),
     premiere_carte_sur_table(CarteSurTable),
@@ -87,7 +86,9 @@ deposer_carte(X, Y) :- deck:paquetjoueur1(P),
                         retract(deck:paquetjoueur1(_)),
                         assert(deck:paquetjoueur1(NouveauPaquet)),
                         length(NouveauPaquet, Compte),
-                        (Compte =:= 0, write("Vous avez gagné.");
+                        (Compte =:= 0, write("Vous avez gagné."), nl,
+                        write("Partie terminée!"),
+                        redemarrer_jeu;
                         write("Vous avez maintenant "), write(Compte), write(" carte(s) en main."), nl,
                         write("La nouvelle carte sur table est:"), nl, afficher_carte(Carte), nl,
                         adversaire_joue, nl).
@@ -100,9 +101,11 @@ adversaire_depose_carte(Carte) :- deck:paquetjoueur2(P),
                         retract(deck:paquetjoueur2(_)),
                         assert(deck:paquetjoueur2(NouveauPaquet)),
                         length(NouveauPaquet, Compte),
-                        (Compte =:= 0, write("L'adversaire a gagné.");
+                        (Compte =:= 0, write("L'adversaire a gagné."), nl,
+                        write("Partie terminée!"),
+                        redemarrer_jeu;
                         write("L'adversaire dépose une carte."), nl, write("Il a maintenant "), write(Compte), write(" carte(s) en main."), nl,
-                        afficher_sa_main,
+                        %afficher_sa_main,
                         write("La nouvelle carte sur table est:"), nl, afficher_carte(Carte), nl,
                         afficher_ma_main).
                         
@@ -133,7 +136,8 @@ adversaire_pige_carte :- deck:piger_une_carte(Carte), !,
                          deck:paquetrestant(P),
                          length(P, ComptePaquetRestant),
                          (ComptePaquetRestant =:= 0,
-                         write("Partie terminée!"),nl;
+                         write("Partie terminée!"),nl,
+                         redemarrer_jeu;
                          write("Il reste "), write(ComptePaquetRestant), write(" carte(s) à piger."), nl,
                          deck:paquetjoueur2(Paquet),
                          add(Carte, Paquet, NouveauPaquet),
